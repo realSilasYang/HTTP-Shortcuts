@@ -2,7 +2,7 @@ name: Android CI (Simple)
 
 on:
   push:
-    branches: [ "develop" ] # 你的主分支是 develop
+    branches: [ "develop" ]
   pull_request:
     branches: [ "develop" ]
   workflow_dispatch:
@@ -11,19 +11,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 步骤 1: 检出你的项目代码
+      # 步骤 1: 修正后的 Checkout 步骤
+      # 移除所有 with 参数，让代码直接检出到工作目录的根部
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 步骤 2: 使用 gradle-build-action 运行检查和构建
-      # 它会自动安装 Java 17 (根据你的项目配置) 并缓存依赖
+      # 步骤 2: Build with Gradle (无需改动)
+      # 现在它可以在正确的路径 /home/runner/work/HTTP-Shortcuts/gradlew 找到脚本了
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          # 将多个任务写在一行，用空格隔开
           arguments: check assembleDebug
 
-      # 步骤 3: 上传 Debug APK 作为构建产物
+      # 步骤 3: Upload Debug APK (无需改动)
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
