@@ -1,4 +1,4 @@
-name: Android CI (with Debug Step)
+name: Android CI
 
 on:
   push:
@@ -13,21 +13,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        # 确保这里没有任何 with: 或 path: 参数
-
-      # --- 调试步骤 ---
-      # 这个命令会递归地列出当前目录下的所有文件
-      - name: Debug List files in the workspace
-        run: ls -R
-      # --- 调试步骤结束 ---
 
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
+          # 关键改动：告诉 Action 去 'HTTPShortcuts' 文件夹里找 gradlew 并执行命令
+          build-root-directory: HTTPShortcuts
+          
+          # 要执行的任务保持不变
           arguments: check assembleDebug
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: http-shortcuts-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          # 关键改动：APK 的路径也需要加上 'HTTPShortcuts/' 前缀
+          path: HTTPShortcuts/app/build/outputs/apk/debug/*.apk
