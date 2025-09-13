@@ -1,36 +1,31 @@
-name: Android Build (from Forked Code)
+name: Android CI (Simple)
 
 on:
-  # 当你向主分支 (main 或 master) push 代码时自动触发
   push:
-    branches:
-      - main # 如果你的主分支是 master，请修改为 master
-      - master
-
-  # 同时也允许你在 Actions 页面手动触发
+    branches: [ "develop" ] # 你的主分支是 develop
+  pull_request:
+    branches: [ "develop" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 步骤 1: 检出你 fork 后的仓库代码
-      # 这一步会把你所有修改过的安卓源码都下载下来
-      - name: Checkout repository code
+      # 步骤 1: 检出你的项目代码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 步骤 2: 使用 gradle-build-action 编译项目
-      # Action 会自动在此仓库的根目录找到 gradlew 文件，无需额外指定路径
+      # 步骤 2: 使用 gradle-build-action 运行检查和构建
+      # 它会自动安装 Java 17 (根据你的项目配置) 并缓存依赖
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          # 直接指定要执行的任务
-          arguments: assembleDebug --stacktrace
+          # 将多个任务写在一行，用空格隔开
+          arguments: check assembleDebug
 
-      # 步骤 3: 上传构建好的 APK
-      - name: Upload APK
+      # 步骤 3: 上传 Debug APK 作为构建产物
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: build-apk
-          # 路径不再需要 'project/' 前缀，因为代码就在根目录
+          name: http-shortcuts-debug-apk
           path: app/build/outputs/apk/debug/*.apk
