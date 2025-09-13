@@ -1,4 +1,4 @@
-name: Android CI (Simple)
+name: Android CI (with Debug Step)
 
 on:
   push:
@@ -11,18 +11,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 移除所有 with 参数，让代码直接检出到工作目录的根部
       - name: Checkout
         uses: actions/checkout@v4
+        # 确保这里没有任何 with: 或 path: 参数
 
-      # 步骤 2: Build with Gradle (无需改动)
-      # 现在它可以在正确的路径 /home/runner/work/HTTP-Shortcuts/gradlew 找到脚本了
+      # --- 调试步骤 ---
+      # 这个命令会递归地列出当前目录下的所有文件
+      - name: Debug List files in the workspace
+        run: ls -R
+      # --- 调试步骤结束 ---
+
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
           arguments: check assembleDebug
 
-      # 步骤 3: Upload Debug APK (无需改动)
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
