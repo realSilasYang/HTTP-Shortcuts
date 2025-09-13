@@ -17,15 +17,11 @@ jobs:
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          # 关键改动：告诉 Action 去 'HTTPShortcuts' 文件夹里找 gradlew 并执行命令
           build-root-directory: HTTPShortcuts
-          
-          # 要执行的任务保持不变
           arguments: assembleDebug
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: http-shortcuts-debug-apk
-          # 关键改动：APK 的路径也需要加上 'HTTPShortcuts/' 前缀
           path: HTTPShortcuts/app/build/outputs/apk/debug/*.apk
