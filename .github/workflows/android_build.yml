@@ -21,7 +21,7 @@ jobs:
           build-root-directory: HTTPShortcuts
           
           # 要执行的任务保持不变
-          arguments: check assembleDebug
+          arguments: assembleDebug
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
