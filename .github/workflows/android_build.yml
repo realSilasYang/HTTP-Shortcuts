@@ -11,7 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 步骤 1: 修正后的 Checkout 步骤
       # 移除所有 with 参数，让代码直接检出到工作目录的根部
       - name: Checkout
         uses: actions/checkout@v4
