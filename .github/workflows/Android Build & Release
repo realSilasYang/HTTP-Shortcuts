@@ -1,0 +1,110 @@
+# 工作流名称，会显示在 GitHub Actions 页面上
+name: Android Build & Release
+
+# 触发条件
+on:
+  workflow_dispatch:                # ① 手动触发模式：可以在 Actions 页面点击 “Run workflow” 来运行
+  push:                              # ② 自动触发模式：当推送 tag 时运行
+    tags:
+      - 'v*'                         # 仅当 tag 名以 v 开头时触发，例如 v1.0.0、v2.3.4
+
+jobs:
+  build:                             # 定义一个名为 build 的任务
+    runs-on: ubuntu-latest           # 在 GitHub 提供的最新 Ubuntu Linux 虚拟机上运行
+
+    steps:                           # 任务的执行步骤（按顺序执行）
+      - name: 拉取代码
+        uses: actions/checkout@v4    # 第一步：检出（clone）当前仓库代码到 runner 环境
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4  # 第二步：安装 Java 开发环境（JDK）
+        with:
+          distribution: 'temurin'    # 选择 Temurin（Eclipse Adoptium）发行版
+          java-version: '17'         # 使用 Java 17（Android Gradle Plugin 新版本推荐）
+
+      - name: 设置版本号
+        id: vars                     # 给这个步骤一个 ID，方便后面引用它的输出
+        run: |
+          # 如果是打 tag 触发（refs/tags/xxx）
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}   # 去掉前缀，只保留版本号，例如 v1.0.0
+            echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          else
+            # 如果是手动触发，就用 "all" 作为版本名
+            echo "version_name=all" >> $GITHUB_OUTPUT
+
+      - name: 构建全部 APK
+        uses: gradle/gradle-build-action@v3    # 使用官方 Gradle 构建 Action
+        with:
+          build-root-directory: HTTPShortcuts  # 指定 Gradle 项目的根目录
+          arguments: assembleDebug assembleRelease assembleReleaseFull
+          # 一次性构建三种类型的 APK：
+          # - debug       → 调试版（带 D 图标）
+          # - release     → 无 Google 服务，可上 F-Droid
+          # - releaseFull → 含 Google 服务，适合 Play 商店
+
+      - name: 重命名 APK
+        run: |
+          mkdir renamed_apks                    # 创建一个目录存放重命名后的 APK
+          # 遍历所有构建输出的 APK 文件
+          for apk in HTTPShortcuts/app/build/outputs/apk/**/**/*.apk; do
+            TYPE=$(echo "$apk" | grep -oP '(?<=apk/)[^/]+')  # 从路径中提取构建类型
+            # 重命名格式：构建类型-版本名.apk
+            # 例如：release-v1.0.0.apk
+            cp "$apk" "renamed_apks/${TYPE}-${{ steps.vars.outputs.version_name }}.apk"
+          done
+
+      - name: 生成发布说明
+        id: notes
+        run: |
+          # 获取构建时间、系统信息、JDK 版本
+          BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S %Z")
+          OS_INFO=$(uname -a)
+          JAVA_VER=$(java -version 2>&1 | head -n 1)
+          
+          # 构建信息部分
+          echo "## 🛠 构建信息" > RELEASE_NOTES.md
+          echo "- 构建时间: $BUILD_TIME" >> RELEASE_NOTES.md
+          echo "- 构建环境: $OS_INFO" >> RELEASE_NOTES.md
+          echo "- JDK 版本: $JAVA_VER" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # 构建类型说明部分
+          echo "## 📦 构建类型说明" >> RELEASE_NOTES.md
+          echo "- **debug**：调试版，带 “D” 图标，包名追加 .debug，开启调试功能，未混淆" >> RELEASE_NOTES.md
+          echo "- **release**：无 Google 服务，可在 F-Droid 分发，已优化和混淆" >> RELEASE_NOTES.md
+          echo "- **releaseFull**：包含 Google 服务，适合 Play 商店发布" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # 新增功能部分（匹配 feat 提交）
+          echo "## ✨ 新增功能" >> RELEASE_NOTES.md
+          git log $(git describe --tags --abbrev=0 @^)..@ --pretty=format:"- %s" | grep -i "feat" >> RELEASE_NOTES.md || echo "- 无" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # 修复部分（匹配 fix 提交）
+          echo "## 🐛 修复" >> RELEASE_NOTES.md
+          git log $(git describe --tags --abbrev=0 @^)..@ --pretty=format:"- %s" | grep -i "fix" >> RELEASE_NOTES.md || echo "- 无" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # 优化部分（匹配 refactor 或 perf 提交）
+          echo "## ⚡ 优化" >> RELEASE_NOTES.md
+          git log $(git describe --tags --abbrev=0 @^)..@ --pretty=format:"- %s" | grep -i "refactor\|perf" >> RELEASE_NOTES.md || echo "- 无" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # 下载链接与 SHA256 校验值部分
+          echo "## 📥 下载链接与 SHA256 校验值" >> RELEASE_NOTES.md
+          for file in renamed_apks/*.apk; do
+            fname=$(basename "$file")                               # 获取文件名
+            sha256=$(sha256sum "$file" | awk '{print $1}')          # 计算 SHA256
+            echo "- [$fname](https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.vars.outputs.version_name }}/$fname)" >> RELEASE_NOTES.md
+            echo "  - SHA256: \`$sha256\`" >> RELEASE_NOTES.md
+          done
+
+      - name: 发布到 Release
+        if: startsWith(github.ref, 'refs/tags/')   # 仅在打 tag 时执行
+        uses: softprops/action-gh-release@v1       # 使用第三方 Action 上传文件到 Release
+        with:
+          files: renamed_apks/*.apk                # 要上传的 APK 文件
+          body_path: RELEASE_NOTES.md              # 使用生成的发布说明作为 Release 内容
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动提供的权限令牌，用于发布 Release
