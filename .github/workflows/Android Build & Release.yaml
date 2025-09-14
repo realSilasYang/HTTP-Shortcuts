@@ -1,5 +1,5 @@
 # ============================================================
-# Android 构建与发布工作流（超详细中文注释版）
+# Android 构建与发布工作流（详细中文注释版）
 # 功能：
 # 1. 支持手动触发（可输入版本号 + 选择构建类型）
 # 2. 支持推送 tag 自动触发（版本号取自 tag）
@@ -10,21 +10,21 @@
 # 7. 自动发布到 GitHub Release
 # ============================================================
 
-name: Android Build & Release  # 工作流名称，会显示在 GitHub Actions 页面
+name: Android Build & Release
 
 on:
   workflow_dispatch:            # 手动触发工作流
     inputs:
       version:                   # 手动输入的版本号
         description: '版本号（例如 v1.0.0，不填则为 all）'
-        required: false          # 不是必填
-        default: 'all'           # 默认值为 all
+        required: false
+        default: 'all'
       buildType:                 # 手动选择构建类型
         description: '构建类型（debug / release / releaseFull / all）'
-        required: true           # 必填
-        default: 'all'           # 默认构建全部类型
-        type: choice              # 下拉选择
-        options:                  # 可选项
+        required: true
+        default: 'all'
+        type: choice
+        options:
           - all
           - debug
           - release
@@ -41,43 +41,38 @@ jobs:
     steps:
       # 1. 拉取代码
       - name: 拉取代码
-        uses: actions/checkout@v4 # 将当前仓库代码检出到 runner 环境
+        uses: actions/checkout@v4
 
       # 2. 安装 JDK 17
       - name: 安装 JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # 使用 Temurin 发行版（OpenJDK）
-          java-version: '17'      # 指定 Java 版本为 17
+          distribution: 'temurin'
+          java-version: '17'
 
-      # 3. 设置版本号（根据触发方式不同）
+      # 3. 设置版本号
       - name: 设置版本号
-        id: vars                  # 设置一个 ID，方便后续步骤引用输出变量
+        id: vars
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            # 如果是 tag 触发，从 GITHUB_REF 中提取版本号（去掉 refs/tags/ 前缀）
             VERSION=${GITHUB_REF#refs/tags/}
           else
-            # 如果是手动触发，使用输入的版本号
             VERSION="${{ github.event.inputs.version }}"
           fi
-          # 将版本号写入 GitHub Actions 输出变量
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
-      # 4. 构建 APK（根据选择的类型动态执行）
+      # 4. 构建 APK
       - name: 构建 APK
         uses: gradle/gradle-build-action@v3
         with:
-          build-root-directory: HTTPShortcuts # Gradle 项目根目录
+          build-root-directory: HTTPShortcuts
           arguments: |
-            # 如果选择 all，则构建三种类型；否则只构建指定类型
             ${{ github.event.inputs.buildType == 'all' && 'assembleDebug assembleRelease assembleReleaseFull' || format('assemble{0}', github.event.inputs.buildType) }}
 
-      # 5. 列出构建产物（调试用）
+      # 5. 列出构建产物
       - name: 列出构建产物
         run: |
           echo "📂 构建产物目录结构："
-          # 递归列出 APK 输出目录，方便确认文件生成位置
           ls -R HTTPShortcuts/app/build/outputs/apk || echo "⚠️ 未找到 outputs/apk 目录"
 
       # 6. 重命名 APK（自适应路径 + 智能跳过无匹配类型）
@@ -85,7 +80,6 @@ jobs:
         run: |
           mkdir -p renamed_apks
           echo "🔍 正在查找 APK 文件..."
-          # 查找所有 APK 文件
           APK_LIST=$(find HTTPShortcuts/app/build/outputs/apk -type f -name "*.apk" 2>/dev/null || true)
 
           if [ -z "$APK_LIST" ]; then
@@ -95,19 +89,16 @@ jobs:
 
           echo "📦 开始重命名..."
           echo "$APK_LIST" | while read apk; do
-            # 从路径中提取构建类型（debug / release / releaseFull）
             TYPE=$(echo "$apk" | grep -oP '(?<=apk/)[^/]+')
             if [ -z "$TYPE" ]; then
               TYPE="unknown"
             fi
 
-            # 如果手动选择了特定类型，但当前文件类型不匹配，则跳过
             if [ "${{ github.event.inputs.buildType }}" != "all" ] && [ "$TYPE" != "${{ github.event.inputs.buildType }}" ]; then
               echo "⏭ 跳过不匹配的类型: $apk"
               continue
             fi
 
-            # 复制并重命名到目标目录
             cp "$apk" "renamed_apks/${TYPE}-${{ steps.vars.outputs.version_name }}.apk"
             echo "✅ 已处理: $apk → renamed_apks/${TYPE}-${{ steps.vars.outputs.version_name }}.apk"
           done
@@ -116,11 +107,10 @@ jobs:
       - name: 生成发布说明
         id: notes
         run: |
-          BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S %Z") # 构建时间
-          OS_INFO=$(uname -a)                        # 系统信息
-          JAVA_VER=$(java -version 2>&1 | head -n 1) # Java 版本
+          BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S %Z")
+          OS_INFO=$(uname -a)
+          JAVA_VER=$(java -version 2>&1 | head -n 1)
 
-          # 创建发布说明文件
           echo "## 🛠 构建信息" > RELEASE_NOTES.md
           echo "- 构建时间: $BUILD_TIME" >> RELEASE_NOTES.md
           echo "- 构建环境: $OS_INFO" >> RELEASE_NOTES.md
@@ -153,6 +143,13 @@ jobs:
             echo "- [$fname](https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.vars.outputs.version_name }}/$fname)" >> RELEASE_NOTES.md
             echo "  - SHA256: \`$sha256\`" >> RELEASE_NOTES.md
 
-      # 8. 发布到 GitHub Release
+      # 8. 发布到 GitHub Release（修复了之前缺失 uses 导致的语法错误）
       - name: 发布到 Release
-        if: startsWith(github.ref,
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: renamed_apks/*.apk
+          body_path: RELEASE_NOTES.md
+          tag_name: ${{ steps.vars.outputs.version_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
