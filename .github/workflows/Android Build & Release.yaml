@@ -1,5 +1,5 @@
 # ============================================================
-# Android 构建与发布工作流（逐行超详细中文注释版）
+# Android 构建与发布工作流（超详细中文注释版）
 # 目标：
 # - 支持手动触发并选择版本号与构建类型（debug/release/releaseFull/all）
 # - 支持推送 tag（如 v1.2.3）自动触发并从 tag 提取版本号
@@ -33,7 +33,7 @@ on:  # 触发条件集合（既支持手动触发，也支持推送 tag 触发�
           - all  # 特殊值：代表一次性构建所有口味
           - debug  # 对应 Gradle 任务 assembleDebug
           - release  # 对应 Gradle 任务 assembleRelease
-          - releaseFull  # 对应 Gradle 任务 assembleReleaseFull（示例项目特有口味）
+          - releaseFull  # 对应 Gradle 任务 assembleReleaseFull（本项目特有）
 
   push:  # push 事件触发配置
     tags:  # 只在打 tag 时触发（不对分支 push 触发）
