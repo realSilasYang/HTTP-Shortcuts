@@ -1128,7 +1128,7 @@
     <!-- Error: Shown when user tries to import shortcuts from an invalid URL -->
     <string name="error_can_only_import_from_http_url">只能通过 http(s) URL导入</string>
     <!-- Action Label: Shown on Quick Settings Title that allows the user to quickly trigger a shortcut without opening the app -->
-    <string name="action_quick_settings_tile_trigger">执行快捷方式</string>
+    <string name="action_quick_settings_tile_trigger">剪贴板同步</string>
     <!-- Instructions: Shown in dialog to instruct user on how to enable shortcuts for use in the Quick Settings Tile -->
     <string name="instructions_quick_settings_tile">你还无法通过快捷工具栏启动快捷方式。\n\n可以通过在编辑快捷方式时选中在\"%2$s\"中的\"%1$s\"复选框来启用此功能。</string>
     <!-- Label: Status code, shows the HTTP status code of the response -->
