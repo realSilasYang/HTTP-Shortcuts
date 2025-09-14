@@ -32,6 +32,7 @@ jobs:
           else
             # 如果是手动触发，就用 "all" 作为版本名
             echo "version_name=all" >> $GITHUB_OUTPUT
+          fi
 
       - name: 构建全部 APK
         uses: gradle/gradle-build-action@v3    # 使用官方 Gradle 构建 Action
