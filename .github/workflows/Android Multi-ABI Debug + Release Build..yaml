@@ -1,4 +1,4 @@
-name: Android Multi-ABI Debug + Release Build
+name: Android Multi-ABI Debug + Release (Auto-Signed)
 
 on:
   workflow_dispatch:
@@ -27,15 +27,26 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: 构建 Debug + Release 多架构包
+      - name: 定位 gradlew 并构建
         run: |
+          # 查找 gradlew
+          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "❌ 没找到 gradlew，请确认仓库包含 Gradle Wrapper"
+            exit 1
+          fi
+          echo "✅ 找到 gradlew: $GRADLEW_PATH"
+          chmod +x "$GRADLEW_PATH"
+          cd "$(dirname "$GRADLEW_PATH")"
+
+          # 构建 Debug + Release（Release 用 debug.keystore 签名）
           ./gradlew assembleDebug assembleRelease
 
       - name: 重命名 APK
         run: |
           mkdir -p renamed_apks
           for type in debug release; do
-            find app/build/outputs/apk/$type -type f -name "*.apk" | while read apk; do
+            find . -path "*/outputs/apk/$type/*.apk" | while read apk; do
               arch=$(basename "$apk" | sed -E "s/^app-([^-]+)-$type\.apk$/\1/")
               [ "$arch" = "app-$type.apk" ] && arch="universal"
               cp "$apk" "renamed_apks/${arch}-${type}-${{ steps.vars.outputs.version_name }}.apk"
