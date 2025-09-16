@@ -1,4 +1,4 @@
-name: Android Multi-ABI Debug + Release (Auto-Signed)
+name: Android Build & Release
 
 on:
   workflow_dispatch:
@@ -8,9 +8,9 @@ on:
         required: true
         default: 'v1.0.0'
       buildType:
-        description: '构建类型（debug/release/releaseFull）'
-        required: true
-        default: 'release'
+        description: '构建类型（debug/release/releaseFull，不填则全部构建）'
+        required: false
+        default: ''
   push:
     tags:
       - 'v*'
@@ -31,12 +31,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 设置版本号
+      - name: 设置版本号和构建类型
         id: vars
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             VERSION="${GITHUB_REF_NAME}"
-            BUILD_TYPE="release"
+            BUILD_TYPE=""
           else
             VERSION="${{ github.event.inputs.version }}"
             BUILD_TYPE="${{ github.event.inputs.buildType }}"
@@ -62,7 +62,7 @@ jobs:
         run: |
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
 
-      - name: 构建 Debug + Release（自动签名）
+      - name: 构建 APK（自动签名）
         run: |
           GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
           if [ -z "$GRADLEW_PATH" ]; then
@@ -72,7 +72,14 @@ jobs:
           echo "✅ 找到 gradlew: $GRADLEW_PATH"
           chmod +x "$GRADLEW_PATH"
           cd "$(dirname "$GRADLEW_PATH")"
-          ./gradlew assembleDebug assembleRelease
+
+          if [ -z "${{ steps.vars.outputs.build_type }}" ]; then
+            echo "📦 未指定构建类型，默认构建 debug 和 release"
+            ./gradlew assembleDebug assembleRelease
+          else
+            echo "📦 构建类型: ${{ steps.vars.outputs.build_type }}"
+            ./gradlew assemble${{ steps.vars.outputs.build_type | capitalize }}
+          fi
         env:
           SIGNING_STORE_FILE: release.keystore
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
@@ -130,7 +137,7 @@ jobs:
             echo "构建时间: $BUILD_TIME"
             echo "构建环境: $BUILD_ENV"
             echo "JDK 版本: $JDK_VERSION"
-            echo "构建类型: $BUILD_TYPE"
+            echo "构建类型: ${BUILD_TYPE:-全部}"
             echo
             echo "📦 构建类型说明"
             echo
