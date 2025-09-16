@@ -121,7 +121,8 @@ android {
             storeFile = file("../keystores/development.jks")
         }
         create("release") {
-            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.keystore")
+            val storeFilePath = System.getenv("SIGNING_STORE_FILE")
+            storeFile = if (storeFilePath != null) file(storeFilePath) else file("release.keystore")
             storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
             keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
             keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
@@ -133,32 +134,28 @@ android {
         getByName("debug") {
             isMinifyEnabled = false
             isShrinkResources = false
-
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             applicationIdSuffix = ".debug"
             signingConfig = signingConfigs["development"]
-
             buildConfigField("String", "BUILD_TYPE", "\"DEBUG\"")
         }
-
+    
         /* Used for F-Droid */
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-
+            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             buildConfigField("String", "BUILD_TYPE", "\"RELEASE\"")
         }
-
+    
         /* Used for Play Store & GitHub release page */
         create("releaseFull") {
             isMinifyEnabled = true
             isShrinkResources = true
             ndk.debugSymbolLevel = "SYMBOL_TABLE"
-            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-
+            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             buildConfigField("String", "BUILD_TYPE", "\"RELEASE_FULL\"")
         }
     }
