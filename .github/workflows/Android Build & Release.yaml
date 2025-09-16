@@ -60,12 +60,13 @@ jobs:
 
       - name: 解码签名文件
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore    
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
         env:
           SIGNING_STORE_FILE: ${{ github.workspace }}/release.keystore
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+
       - name: 构建 APK（自动签名）
         run: |
           GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
@@ -87,7 +88,7 @@ jobs:
             ./gradlew assemble$TYPE_CAP
           fi
         env:
-          SIGNING_STORE_FILE: release.keystore
+          SIGNING_STORE_FILE: ${{ github.workspace }}/release.keystore
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
