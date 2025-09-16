@@ -48,23 +48,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
-    }
-
-    signingConfigs {
-        create("release") {
-            applyReleaseSigning()
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("release")
-        }
-        create("releaseFull") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("release")
-        }
-    }
+    }   
 
     lint {
         disable.add("MissingTranslation")
