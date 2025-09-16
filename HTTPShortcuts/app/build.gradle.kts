@@ -50,20 +50,11 @@ android {
         jvmTarget = "11"
     }
 
-    lint {
-        disable.add("MissingTranslation")
-        disable.add("Instantiatable")
-    }
-
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.keystore")
-            storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+            applyReleaseSigning()
         }
     }
-
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
@@ -74,8 +65,11 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
-}
 
+    lint {
+        disable.add("MissingTranslation")
+        disable.add("Instantiatable")
+    }
 
     defaultConfig {
         applicationId = "ch.rmy.android.http_shortcuts"
