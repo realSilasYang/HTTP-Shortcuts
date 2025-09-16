@@ -1,4 +1,4 @@
-name: Android Multi-ABI Debug + Release (Auto-Signed)
+name: Android Build & Release
 
 on:
   workflow_dispatch:
