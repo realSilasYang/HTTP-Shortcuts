@@ -77,8 +77,10 @@ jobs:
             echo "📦 未指定构建类型，默认构建 debug 和 release"
             ./gradlew assembleDebug assembleRelease
           else
-            echo "📦 构建类型: ${{ steps.vars.outputs.build_type }}"
-            ./gradlew assemble${{ steps.vars.outputs.build_type | capitalize }}
+            TYPE="${{ steps.vars.outputs.build_type }}"
+            TYPE_CAP="${TYPE^}"  # bash 首字母大写
+            echo "📦 构建类型: $TYPE"
+            ./gradlew assemble$TYPE_CAP
           fi
         env:
           SIGNING_STORE_FILE: release.keystore
