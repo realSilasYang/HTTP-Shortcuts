@@ -1,4 +1,3 @@
-apply(from = rootProject.file("signing-config.gradle.kts"))
 import com.android.build.gradle.api.ApplicationVariant
 import com.android.build.gradle.api.BaseVariantOutput
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
@@ -48,7 +47,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
-    }   
+    }
 
     lint {
         disable.add("MissingTranslation")
