@@ -74,11 +74,11 @@ jobs:
           cd "$(dirname "$GRADLEW_PATH")"
 
           if [ -z "${{ steps.vars.outputs.build_type }}" ]; then
-            echo "📦 未指定构建类型，默认构建 debug 和 release"
-            ./gradlew assembleDebug assembleRelease
+            echo "📦 未指定构建类型，默认构建 debug、release、releaseFull"
+            ./gradlew assembleDebug assembleRelease assembleReleaseFull
           else
             TYPE="${{ steps.vars.outputs.build_type }}"
-            TYPE_CAP="${TYPE^}"  # bash 首字母大写
+            TYPE_CAP="${TYPE^}"
             echo "📦 构建类型: $TYPE"
             ./gradlew assemble$TYPE_CAP
           fi
@@ -91,7 +91,7 @@ jobs:
       - name: 重命名 APK
         run: |
           mkdir -p renamed_apks
-          for type in debug release; do
+          for type in debug release releaseFull; do
             find . -path "*/outputs/apk/$type/*.apk" | while read apk; do
               arch=$(basename "$apk" | sed -E "s/^app-([^-]+)-$type\.apk$/\1/")
               [ "$arch" = "app-$type.apk" ] && arch="universal"
@@ -111,15 +111,19 @@ jobs:
             RANGE="$VERSION"
           fi
 
-          FEAT=$(git log $RANGE --pretty=format:"- %s" --grep="feat\|feature" || echo "无")
-          FIX=$(git log $RANGE --pretty=format:"- %s" --grep="fix\|bug" || echo "无")
-          PERF=$(git log $RANGE --pretty=format:"- %s" --grep="perf\|optimize\|优化" || echo "无")
+          FEAT=$(git log $RANGE --pretty=format:"- %s" --grep="feat\|feature" || true)
+          FIX=$(git log $RANGE --pretty=format:"- %s" --grep="fix\|bug" || true)
+          PERF=$(git log $RANGE --pretty=format:"- %s" --grep="perf\|optimize\|优化" || true)
+
+          [ -z "$FEAT" ] && FEAT="无"
+          [ -z "$FIX" ] && FIX="无"
+          [ -z "$PERF" ] && PERF="无"
 
           echo "feat_list=$FEAT" >> $GITHUB_OUTPUT
           echo "fix_list=$FIX" >> $GITHUB_OUTPUT
           echo "perf_list=$PERF" >> $GITHUB_OUTPUT
 
-      - name: 生成构建信息（自动化）
+      - name: 生成构建信息（Markdown）
         env:
           FEAT_LIST: ${{ steps.changelog.outputs.feat_list }}
           FIX_LIST: ${{ steps.changelog.outputs.fix_list }}
@@ -130,40 +134,33 @@ jobs:
           BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           BUILD_ENV=$(uname -a)
           JDK_VERSION=$(java -version 2>&1 | head -n 1)
-          REPO="${GITHUB_REPOSITORY}"
-          TAG="$VERSION_NAME"
 
           {
-            echo "🛠 构建信息"
+            echo "# 🛠 构建信息"
             echo
-            echo "构建时间: $BUILD_TIME"
-            echo "构建环境: $BUILD_ENV"
-            echo "JDK 版本: $JDK_VERSION"
-            echo "构建类型: ${BUILD_TYPE:-全部}"
+            echo "**构建时间**: $BUILD_TIME  "
+            echo "**构建环境**: $BUILD_ENV  "
+            echo "**JDK 版本**: $JDK_VERSION  "
+            echo "**构建类型**: ${BUILD_TYPE:-全部}  "
             echo
-            echo "📦 构建类型说明"
+            echo "## 📦 构建类型说明"
             echo
-            echo "debug：调试版，带 “D” 图标，包名追加 .debug，开启调试功能，未混淆"
-            echo "release：无 Google 服务，可在 F-Droid 分发，已优化和混淆"
-            echo "releaseFull：包含 Google 服务，适合 Play 商店发布"
+            echo "- **debug**：调试版，带 “D” 图标，包名追加 .debug，开启调试功能，未混淆"
+            echo "- **release**：无 Google 服务，可在 F-Droid 分发，已优化和混淆"
+            echo "- **releaseFull**：包含 Google 服务，适合 Play 商店发布"
             echo
-            echo "✨ 新增功能"
-            echo "$FEAT_LIST"
+            echo "## ✨ 新增功能"
             echo
-            echo "🐛 修复"
-            echo "$FIX_LIST"
+            echo "${FEAT_LIST}"
             echo
-            echo "⚡ 优化"
-            echo "$PERF_LIST"
+            echo "## 🐛 修复"
             echo
-            echo "📥 下载链接与 SHA256 校验值"
+            echo "${FIX_LIST}"
+            echo
+            echo "## ⚡ 优化"
+            echo
+            echo "${PERF_LIST}"
           } > build_info.txt
-
-          for file in renamed_apks/*.apk; do
-            fname=$(basename "$file")
-            sha256=$(sha256sum "$file" | awk '{print $1}')
-            echo "- [$fname](https://github.com/$REPO/releases/download/$TAG/$fname)  \`SHA256: $sha256\`" >> build_info.txt
-          done
 
       - name: 发布到 Release
         uses: softprops/action-gh-release@v1
