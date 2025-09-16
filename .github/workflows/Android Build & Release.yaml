@@ -1,4 +1,4 @@
-name: Android Build & Release
+name: Android Multi-ABI Debug + Release (Auto-Signed)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整提交历史
+          fetch-depth: 0
 
       - name: 安装 JDK 17
         uses: actions/setup-java@v4
@@ -102,13 +102,18 @@ jobs:
           echo "perf_list=$PERF" >> $GITHUB_OUTPUT
 
       - name: 生成构建信息（自动化）
+        env:
+          FEAT_LIST: ${{ steps.changelog.outputs.feat_list }}
+          FIX_LIST: ${{ steps.changelog.outputs.fix_list }}
+          PERF_LIST: ${{ steps.changelog.outputs.perf_list }}
+          BUILD_TYPE: ${{ steps.vars.outputs.build_type }}
+          VERSION_NAME: ${{ steps.vars.outputs.version_name }}
         run: |
           BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           BUILD_ENV=$(uname -a)
           JDK_VERSION=$(java -version 2>&1 | head -n 1)
-          BUILD_TYPE="${{ steps.vars.outputs.build_type }}"
           REPO="${GITHUB_REPOSITORY}"
-          TAG="${{ steps.vars.outputs.version_name }}"
+          TAG="$VERSION_NAME"
 
           cat << EOF > build_info.txt
 🛠 构建信息
@@ -125,13 +130,13 @@ release：无 Google 服务，可在 F-Droid 分发，已优化和混淆
 releaseFull：包含 Google 服务，适合 Play 商店发布  
 
 ✨ 新增功能  
-${{ steps.changelog.outputs.feat_list }}  
+$FEAT_LIST  
 
 🐛 修复  
-${{ steps.changelog.outputs.fix_list }}  
+$FIX_LIST  
 
 ⚡ 优化  
-${{ steps.changelog.outputs.perf_list }}  
+$PERF_LIST  
 
 📥 下载链接与 SHA256 校验值
 EOF
