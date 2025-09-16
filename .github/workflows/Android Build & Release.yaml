@@ -60,7 +60,7 @@ jobs:
 
       - name: 解码签名文件
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
 
       - name: 构建 APK（自动签名）
         run: |
