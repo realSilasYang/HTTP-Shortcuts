@@ -1,3 +1,4 @@
+apply(from = rootProject.file("signing-config.gradle.kts"))
 import com.android.build.gradle.api.ApplicationVariant
 import com.android.build.gradle.api.BaseVariantOutput
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
@@ -53,6 +54,28 @@ android {
         disable.add("MissingTranslation")
         disable.add("Instantiatable")
     }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.keystore")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
+        }
+        create("releaseFull") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+}
+
 
     defaultConfig {
         applicationId = "ch.rmy.android.http_shortcuts"
