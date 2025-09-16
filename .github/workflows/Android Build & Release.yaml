@@ -11,6 +11,9 @@ on:
         description: '构建类型（debug/release/releaseFull）'
         required: true
         default: 'release'
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -31,12 +34,18 @@ jobs:
       - name: 设置版本号
         id: vars
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          BUILD_TYPE="${{ github.event.inputs.buildType }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+            BUILD_TYPE="release"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+            BUILD_TYPE="${{ github.event.inputs.buildType }}"
+          fi
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
           echo "build_type=$BUILD_TYPE" >> $GITHUB_OUTPUT
 
-      - name: 自动打 Tag（如果不存在）
+      - name: 自动打 Tag（仅手动触发时）
+        if: github.event_name == 'workflow_dispatch'
         run: |
           VERSION="${{ steps.vars.outputs.version_name }}"
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
@@ -115,33 +124,32 @@ jobs:
           REPO="${GITHUB_REPOSITORY}"
           TAG="$VERSION_NAME"
 
-          cat << EOF > build_info.txt
-🛠 构建信息
+          {
+            echo "🛠 构建信息"
+            echo
+            echo "构建时间: $BUILD_TIME"
+            echo "构建环境: $BUILD_ENV"
+            echo "JDK 版本: $JDK_VERSION"
+            echo "构建类型: $BUILD_TYPE"
+            echo
+            echo "📦 构建类型说明"
+            echo
+            echo "debug：调试版，带 “D” 图标，包名追加 .debug，开启调试功能，未混淆"
+            echo "release：无 Google 服务，可在 F-Droid 分发，已优化和混淆"
+            echo "releaseFull：包含 Google 服务，适合 Play 商店发布"
+            echo
+            echo "✨ 新增功能"
+            echo "$FEAT_LIST"
+            echo
+            echo "🐛 修复"
+            echo "$FIX_LIST"
+            echo
+            echo "⚡ 优化"
+            echo "$PERF_LIST"
+            echo
+            echo "📥 下载链接与 SHA256 校验值"
+          } > build_info.txt
 
-构建时间: $BUILD_TIME  
-构建环境: $BUILD_ENV  
-JDK 版本: $JDK_VERSION  
-构建类型: $BUILD_TYPE  
-
-📦 构建类型说明
-
-debug：调试版，带 “D” 图标，包名追加 .debug，开启调试功能，未混淆  
-release：无 Google 服务，可在 F-Droid 分发，已优化和混淆  
-releaseFull：包含 Google 服务，适合 Play 商店发布  
-
-✨ 新增功能  
-$FEAT_LIST  
-
-🐛 修复  
-$FIX_LIST  
-
-⚡ 优化  
-$PERF_LIST  
-
-📥 下载链接与 SHA256 校验值
-EOF
-
-          echo "" >> build_info.txt
           for file in renamed_apks/*.apk; do
             fname=$(basename "$file")
             sha256=$(sha256sum "$file" | awk '{print $1}')
