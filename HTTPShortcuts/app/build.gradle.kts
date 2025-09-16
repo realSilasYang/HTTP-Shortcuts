@@ -120,6 +120,12 @@ android {
             storePassword = "Password1"
             storeFile = file("../keystores/development.jks")
         }
+        create("release") {
+            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "release.keystore")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+        }
     }
 
     buildTypes {
@@ -139,7 +145,7 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-
+            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             buildConfigField("String", "BUILD_TYPE", "\"RELEASE\"")
@@ -150,7 +156,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             ndk.debugSymbolLevel = "SYMBOL_TABLE"
-
+            signingConfig = signingConfigs["release"] // ✅ 绑定 release 签名
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
             buildConfigField("String", "BUILD_TYPE", "\"RELEASE_FULL\"")
