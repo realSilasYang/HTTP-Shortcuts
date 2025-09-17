@@ -124,9 +124,17 @@ jobs:
           [ -z "$FIX" ] && FIX="无"
           [ -z "$PERF" ] && PERF="无"
 
-          echo "feat_list=$FEAT" >> $GITHUB_OUTPUT
-          echo "fix_list=$FIX" >> $GITHUB_OUTPUT
-          echo "perf_list=$PERF" >> $GITHUB_OUTPUT
+          {
+            echo "feat_list<<EOF"
+            echo "$FEAT"
+            echo "EOF"
+            echo "fix_list<<EOF"
+            echo "$FIX"
+            echo "EOF"
+            echo "perf_list<<EOF"
+            echo "$PERF"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: 生成构建信息（Markdown）
         env:
